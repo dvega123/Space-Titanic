@@ -1,0 +1,138 @@
+---
+name: "Danny Vega
+title: "TitaniC Project"
+output: html_document
+date: '2022-04-18'
+---
+
+
+```{r}
+train=read.csv("train.csv")
+test=read.csv("test.csv")
+
+head(train)
+summary(train)
+
+lapply(train, class)
+```
+
+#Changing variables
+```{r}
+#Home Planet
+train$HomePlanet = as.factor(train$HomePlanet)
+
+#CryoSleep
+train$CryoSleep = as.integer(train$CryoSleep)
+
+#Cabin
+library(stringr)
+train$Cabin = str_replace(train$Cabin, "/", " ")
+library(dplyr)
+library(tidyr)
+train = train %>% separate(Cabin, c("Deck", "Num", "Side"))
+head(train)
+train$Deck = as.factor(train$Deck)
+train$Side = as.factor(train$Side)
+train$Num = as.numeric(train$Num)
+
+#Destination
+Destination = as.factor(train$Destination)
+
+#VIP
+train$VIP = as.factor(train$VIP)
+
+#Name
+train = train %>% separate(Name, c("First", "Last"))
+head(train)
+
+train$Last= as.factor(train$Last)
+
+#Transported
+train$Transported= as.factor(train$Transported)
+
+
+
+
+```
+
+
+#Find missing data 
+```{r}
+
+library(Amelia)
+library(mlbench)
+missmap(train, col=c("blue", "red"), legend=FALSE)
+
+lapply(train, class)
+summary(train)
+```
+
+#Full Model
+```{r}
+head(train)
+
+Full_Model=glm(Transported ~ RoomService +HomePlanet+ CryoSleep + Deck + Num + Side+  Destination + Age + VIP +RoomService + Spa + ShoppingMall + Spa + VRDeck + Deck*Num*Side, data=train, family= "binomial")
+summary(Full_Model)
+
+Reduced_Model = glm(Transported ~ RoomService + HomePlanet + CryoSleep + Age + Spa + ShoppingMall + Spa + VRDeck, data=train, family = "binomial" )
+summary(Reduced_Model)
+
+
+```
+
+#Test Data
+```{r}
+#Home Planet
+test$HomePlanet = as.factor(test$HomePlanet)
+
+#CryoSleep
+test$CryoSleep = as.integer(test$CryoSleep)
+
+#Cabin
+test$Cabin = str_replace(test$Cabin, "/", " ")
+
+test = test %>% separate(Cabin, c("Deck", "Num", "Side"))
+head(test)
+test$Deck = as.factor(test$Deck)
+test$Deck
+test$Side = as.factor(test$Side)
+test$Num = as.numeric(test$Num)
+
+#Destination
+Destination = as.factor(test$Destination)
+
+#VIP
+test$VIP = as.factor(test$VIP)
+
+#Name
+test = test %>% separate(Name, c("First", "Last"))
+head(test)
+
+test$Last= as.factor(test$Last)
+
+summary(test)
+```
+
+#Predict 
+```{r}
+test$FoodCourt[is.na(test$FoodCourt)] = mean(test$FoodCourt, na.rm = T)
+test$Spa[is.na(test$Spa)] = mean(test$Spa, na.rm = T)
+test$ShoppingMall[is.na(test$ShoppingMall)] = mean(test$ShoppingMall, na.rm = T)
+test$CryoSleep[is.na(test$CryoSleep)] = mean(test$CryoSleep, na.rm = T)
+test$Age[is.na(test$Age)] = mean(test$Age, na.rm = T)
+test$RoomService[is.na(test$RoomService)] = mean(test$RoomService, na.rm = T)
+test$VRDeck[is.na(test$VRDeck)] = mean(test$VRDeck, na.rm = T)
+library(Amelia)
+library(mlbench)
+missmap(test, col=c("blue", "red"), legend=FALSE)
+p=predict(Reduced_Model, test)
+p = ifelse(p > 1, "True", "False")
+p
+head(test)
+
+Results=cbind(test[1],p)
+Results=as.data.frame(Results)
+
+write.csv(Results,"Results.csv", row.names = FALSE)
+```
+
